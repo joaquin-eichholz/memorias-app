@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Sidebar from './Sidebar'
 import Editor from './Editor'
 import AiChat from './AiChat'
+import DriveModal from './DriveModal'
 import { logout } from '../utils/auth'
 
 export default function Layout({ onLogout, drive }) {
@@ -11,6 +12,7 @@ export default function Layout({ onLogout, drive }) {
   const [chatOpen, setChatOpen] = useState(false)
   const [darkMode, setDarkMode] = useState(false)
   const [fontSize, setFontSize] = useState(18)
+  const [driveModalOpen, setDriveModalOpen] = useState(false)
 
   function handleLogout() {
     logout()
@@ -87,15 +89,15 @@ export default function Layout({ onLogout, drive }) {
             {/* Drive status */}
             {drive && (
               <button
-                onClick={drive.connected ? drive.disconnect : drive.connect}
-                className={`p-2 rounded-lg transition-colors text-sm ${
+                onClick={() => setDriveModalOpen(true)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium ${
                   drive.connected
-                    ? 'text-green-600 dark:text-green-400 hover:bg-stone-100 dark:hover:bg-stone-700'
+                    ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/40'
                     : 'text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-700'
                 }`}
-                title={drive.connected ? 'Drive conectado — click para desconectar' : 'Conectar Google Drive'}
+                title={drive.connected ? 'Drive conectado' : 'Conectar Google Drive'}
               >
-                {drive.connected ? '☁️' : '○ Drive'}
+                {drive.connected ? '☁️ Drive' : '○ Drive'}
               </button>
             )}
 
@@ -160,6 +162,9 @@ export default function Layout({ onLogout, drive }) {
           )}
         </div>
       </div>
+      {driveModalOpen && (
+        <DriveModal drive={drive} onClose={() => setDriveModalOpen(false)} />
+      )}
     </div>
   )
 }
