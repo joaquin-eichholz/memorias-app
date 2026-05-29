@@ -1,0 +1,24 @@
+src/components/Layout.jsx
+  s_b4d94ad51001b5::t_687d152a9d7612 165-167
+  s_b4d94ad51001b5::t_05d0739ec1bb25 5
+  s_b4d94ad51001b5::t_52b3d4ac990f6e 15
+  s_b4d94ad51001b5::t_e368c2bb8bbbea 92-93,95,98,100
+src/components/DriveModal.jsx
+  s_b4d94ad51001b5::t_15b5677201d103 1-97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "6427758ac421090d263057ca9e4dd17cfa43ed76",
+  "prompts": {},
+  "sessions": {
+    "s_b4d94ad51001b5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "603347aa-bbe4-4131-9e1b-a41450dd450a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "joaquin eichholz <joaquin.eichholz@mercadolibre.cl>"
+    }
+  }
+}
