@@ -24,9 +24,9 @@ function ToolbarButton({ onClick, active, title, children }) {
   )
 }
 
-export default function Editor({ chapterId, onContentChange }) {
+export default function Editor({ chapterId, onContentChange, drive }) {
   const [title, setTitle] = useState('')
-  const [saveStatus, setSaveStatus] = useState('saved') // 'saved' | 'saving' | 'unsaved'
+  const [saveStatus, setSaveStatus] = useState('saved')
   const saveTimer = useRef(null)
 
   const editor = useEditor({
@@ -46,37 +46,53 @@ export default function Editor({ chapterId, onContentChange }) {
       if (onContentChange) onContentChange(html)
       setSaveStatus('unsaved')
       clearTimeout(saveTimer.current)
-      saveTimer.current = setTimeout(() => {
-        if (chapterId) {
-          setSaveStatus('saving')
-          saveChapter(chapterId, html)
+      saveTimer.current = setTimeout(async () => {
+        if (!chapterId) return
+        setSaveStatus('saving')
+        try {
+          if (drive?.connected) {
+            await drive.updateFile(chapterId, html)
+          } else {
+            saveChapter(chapterId, html)
+          }
           setSaveStatus('saved')
+        } catch {
+          setSaveStatus('unsaved')
         }
       }, DEBOUNCE_MS)
     },
   })
 
-  // Cargar capítulo al seleccionar
   useEffect(() => {
     if (!editor) return
-    if (!chapterId) {
-      editor.commands.clearContent()
-      setTitle('')
-      return
+    if (!chapterId) { editor.commands.clearContent(); setTitle(''); return }
+
+    async function load() {
+      setSaveStatus('saved')
+      if (drive?.connected) {
+        try {
+          const content = await drive.readFile(chapterId)
+          editor.commands.setContent(content || '')
+          // El título viene del Sidebar (nombre del archivo sin extensión)
+        } catch {
+          editor.commands.setContent('')
+        }
+      } else {
+        const data = getChapter(chapterId)
+        const { chapters } = JSON.parse(localStorage.getItem('memorias_index') || '{"chapters":[]}')
+        const meta = chapters.find(c => c.id === chapterId)
+        if (meta) setTitle(meta.title)
+        editor.commands.setContent(data?.content || '')
+      }
     }
-    const data = getChapter(chapterId)
-    const { chapters } = JSON.parse(localStorage.getItem('memorias_index') || '{"chapters":[]}')
-    const meta = chapters.find(c => c.id === chapterId)
-    if (meta) setTitle(meta.title)
-    editor.commands.setContent(data?.content || '')
-    setSaveStatus('saved')
-  }, [chapterId, editor])
+    load()
+  }, [chapterId, editor, drive?.connected])
 
   const handleTitleBlur = useCallback(() => {
-    if (chapterId && title.trim()) {
+    if (!drive?.connected && chapterId && title.trim()) {
       updateChapterTitle(chapterId, title.trim())
     }
-  }, [chapterId, title])
+  }, [chapterId, title, drive?.connected])
 
   const wordCount = editor?.storage?.characterCount?.words() ?? 0
 
@@ -86,14 +102,8 @@ export default function Editor({ chapterId, onContentChange }) {
     const blob = new Blob([`${title}\n\n${text}`], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
-    a.href = url
-    a.download = `${title || 'capitulo'}.txt`
-    a.click()
+    a.href = url; a.download = `${title || 'capitulo'}.txt`; a.click()
     URL.revokeObjectURL(url)
-  }
-
-  function exportPdf() {
-    window.print()
   }
 
   if (!chapterId) {
@@ -112,8 +122,6 @@ export default function Editor({ chapterId, onContentChange }) {
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-stone-900">
-
-      {/* Barra de herramientas */}
       <div className="flex flex-wrap items-center gap-1 px-4 py-2 border-b border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800">
         <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor?.isActive('heading', { level: 1 })} title="Título grande">H1</ToolbarButton>
         <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor?.isActive('heading', { level: 2 })} title="Título mediano">H2</ToolbarButton>
@@ -128,31 +136,30 @@ export default function Editor({ chapterId, onContentChange }) {
           <span>{wordCount} palabras</span>
           <span className={`flex items-center gap-1 ${
             saveStatus === 'saved' ? 'text-green-600 dark:text-green-400' :
-            saveStatus === 'saving' ? 'text-amber-500' :
-            'text-stone-400'
+            saveStatus === 'saving' ? 'text-amber-500' : 'text-stone-400'
           }`}>
-            {saveStatus === 'saved' && '✓ Guardado'}
+            {saveStatus === 'saved' && `✓ Guardado${drive?.connected ? ' en Drive' : ''}`}
             {saveStatus === 'saving' && '⟳ Guardando…'}
             {saveStatus === 'unsaved' && '● Sin guardar'}
           </span>
           <button onClick={exportTxt} className="hover:text-stone-600 dark:hover:text-stone-300 transition-colors" title="Exportar .txt">↓ .txt</button>
-          <button onClick={exportPdf} className="hover:text-stone-600 dark:hover:text-stone-300 transition-colors" title="Imprimir / exportar PDF">↓ PDF</button>
+          <button onClick={() => window.print()} className="hover:text-stone-600 dark:hover:text-stone-300 transition-colors" title="Imprimir / PDF">↓ PDF</button>
         </div>
       </div>
 
-      {/* Título editable */}
-      <div className="px-8 pt-8 pb-2">
-        <input
-          type="text"
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-          onBlur={handleTitleBlur}
-          placeholder="Título del capítulo"
-          className="w-full text-3xl font-bold text-stone-800 dark:text-stone-100 bg-transparent border-none outline-none placeholder:text-stone-300 dark:placeholder:text-stone-600"
-        />
-      </div>
+      {!drive?.connected && (
+        <div className="px-8 pt-8 pb-2">
+          <input
+            type="text"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            onBlur={handleTitleBlur}
+            placeholder="Título del capítulo"
+            className="w-full text-3xl font-bold text-stone-800 dark:text-stone-100 bg-transparent border-none outline-none placeholder:text-stone-300 dark:placeholder:text-stone-600"
+          />
+        </div>
+      )}
 
-      {/* Editor */}
       <div className="flex-1 overflow-auto">
         <EditorContent editor={editor} className="h-full" />
       </div>

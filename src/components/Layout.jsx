@@ -4,7 +4,7 @@ import Editor from './Editor'
 import AiChat from './AiChat'
 import { logout } from '../utils/auth'
 
-export default function Layout({ onLogout }) {
+export default function Layout({ onLogout, drive }) {
   const [selectedChapterId, setSelectedChapterId] = useState(null)
   const [editorContent, setEditorContent] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -47,6 +47,7 @@ export default function Layout({ onLogout }) {
           selectedId={selectedChapterId}
           onSelect={(id) => { setSelectedChapterId(id); setSidebarOpen(false) }}
           onClose={() => setSidebarOpen(false)}
+          drive={drive}
         />
       </aside>
 
@@ -83,6 +84,21 @@ export default function Layout({ onLogout }) {
               title="Letra más grande"
             >A+</button>
 
+            {/* Drive status */}
+            {drive && (
+              <button
+                onClick={drive.connected ? drive.disconnect : drive.connect}
+                className={`p-2 rounded-lg transition-colors text-sm ${
+                  drive.connected
+                    ? 'text-green-600 dark:text-green-400 hover:bg-stone-100 dark:hover:bg-stone-700'
+                    : 'text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-700'
+                }`}
+                title={drive.connected ? 'Drive conectado — click para desconectar' : 'Conectar Google Drive'}
+              >
+                {drive.connected ? '☁️' : '○ Drive'}
+              </button>
+            )}
+
             {/* Dark mode */}
             <button
               onClick={toggleDark}
@@ -118,6 +134,7 @@ export default function Layout({ onLogout }) {
             <Editor
               chapterId={selectedChapterId}
               onContentChange={setEditorContent}
+              drive={drive}
             />
           </main>
 
